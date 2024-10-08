@@ -1,0 +1,542 @@
+---
+title: "Análise de dados sobre: Acidentes de Trânsito em Porto Alegre"
+author: "Victor Miguel"
+date: "2024-09-11"
+output:
+  rmdformats::material:
+    highlight: kate  # Define o tema de destaque do código
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Intrudução{.tabset}
+Essa análise se baseia na concatenação dos dados disponíveis no [Conjunto de Dados abertos de Porto Alegre](https://dadosabertos.poa.br/dataset/acidentes-de-transito-acidentes)
+
+## Por qual motivo se interessar nessa análise?
+Acidentes de trânsito são uma das principais causas de morte e ferimentos graves em áreas urbanas, impactando a qualidade de vida e a segurança dos cidadãos. Em Porto Alegre, uma cidade com tráfego intenso e uma população crescente, o número de acidentes de trânsito é uma preocupação constante tanto para os órgãos governamentais quanto para a sociedade em geral. Analisar os dados relacionados a esses acidentes nos ajuda a entender melhor as suas causas, identificar padrões de risco e propor soluções efetivas para reduzir a ocorrência de acidentes. Tanto eu quanto você deveríamos estar interessados nisso, pois os acidentes de trânsito não apenas resultam em perdas humanas e materiais, mas também geram altos custos econômicos e sociais para a cidade. Através de uma análise cuidadosa, podemos contribuir para melhorar a segurança no trânsito, proteger vidas e otimizar o planejamento urbano.
+
+## Abordagem e metodologia
+Para abordar esse problema, utilizarei dados históricos de acidentes de trânsito ocorridos em Porto Alegre. Esses dados incluem informações como data, hora, local, tipo de veículo envolvido e gravidade do acidente. A metodologia empregada envolverá a limpeza e organização dos dados, seguida por uma análise exploratória que destacará padrões sazonais e espaciais. A análise será conduzida utilizando ferramentas estatísticas e de visualização de dados, para criar gráficos interativos e relatórios que facilitem a compreensão dos resultados.
+
+
+## Abordagem proposta
+A técnica adotada para abordar o problema envolve a análise de séries temporais e a aplicação de métodos de visualização para identificar os principais fatores associados aos acidentes de trânsito em Porto Alegre. Ao analisar o número de acidentes por mês e por ano, juntamente com as características do local e das condições de tráfego, a abordagem permitirá destacar padrões significativos. A análise também permitirá observar a evolução dos acidentes ao longo dos anos e identificar áreas críticas com maior frequência de acidentes.
+
+## Vantagens e Benefícios para os clientes
+
+A análise ajudará potenciais clientes, como autoridades de trânsito, gestores públicos e planejadores urbanos, a tomar decisões mais embasadas sobre segurança viária. Ao identificar os padrões e causas mais comuns de acidentes, esses stakeholders poderão desenvolver políticas mais eficazes de prevenção, alocar recursos de forma mais eficiente e otimizar a infraestrutura viária da cidade. Além disso, empresas do setor de transporte e seguros também podem se beneficiar desses insights ao adaptar suas estratégias e operações para mitigar os riscos associados ao trânsito.
+
+# Pacotes
+| **Pacote**   | **Função/Propósito**                                                                                      |
+|--------------|----------------------------------------------------------------------------------------------------------|
+| `dplyr`      | Manipulação de dados. Utilizado para filtragem, agrupamento, sumarização e transformação de DataFrames.    |
+| `ggplot2`    | Visualização de dados. Usado para criar gráficos estáticos como gráficos de barras, linhas e scatterplots. |
+| `plotly`     | Visualização interativa de dados. Utilizado para transformar gráficos do ggplot2 em gráficos interativos.  |
+| `leaflet`  | Criação de mapas interativos.  |
+| `readr`      | Leitura de arquivos CSV e outros formatos de dados. Usado para carregar os dados de acidentes.             |
+| `tidyr`      | Organização de dados. Usado para "arrumar" dados e lidar com valores faltantes ou colunas desorganizadas.  |
+| `corrplot`     | Visualizar correlações entre variáveis em uma matriz de dados.            |
+| `leaflet.extras`    | oferece uma série de funcionalidades adicionais para complementar o leaflet e criar mapas interativos mais avançados em R.                                     |
+
+# Dicionário de dados
+
+| **Campo**          | **Descrição**                                                                 |
+|--------------------|-------------------------------------------------------------------------------|
+| `data_extracao`    | Data e hora de realização da extração de dados do sistema.                     |
+| `idacidente`       | Número de identificação do acidente.                                           |
+| `longitude`        | Coordenada geográfica (eixo X) de localização do ponto onde ocorreu o acidente.|
+| `latitude`         | Coordenada geográfica (eixo Y) de localização do ponto onde ocorreu o acidente.|
+| `log1`             | Nome do Logradouro onde ocorreu o acidente.                                    |
+| `log2`             | Nome do Logradouro que cruza o Logradouro no ponto onde ocorreu o acidente.     |
+| `predial1`         | Número do Logradouro onde ocorreu o acidente.                                  |
+| `tipo_acid`        | Informação descritiva do tipo de acidente.                                     |
+| `queda_arr`        | Indica se houve queda de algum veículo em arroio.                              |
+| `data`             | Data em que ocorreu o acidente.                                                |
+| `dia_sem`          | Dia da semana em que ocorreu o acidente.                                       |
+| `hora`             | Hora em que ocorreu o acidente.                                                |
+| `feridos`          | Número de feridos no acidente.                                                 |
+| `feridos_gr`       | Número de feridos graves no acidente.                                          |
+| `mortes`           | Contagem de vítimas fatais no momento do acidente.                             |
+| `morte_post`       | Contagem de vítimas fatais após o acidente, dentro de 30 dias.                 |
+| `fatais`           | Somatório de vítimas fatais no momento do acidente e posteriores.              |
+| `auto`             | Número de automóveis envolvidos no acidente.                                   |
+| `taxi`             | Número de táxis envolvidos no acidente.                                        |
+| `lotacao`          | Número de lotações envolvidas no acidente.                                     |
+| `onibus_urb`       | Número de ônibus urbanos envolvidos no acidente.                               |
+| `onibus_met`       | Número de ônibus metropolitanos envolvidos no acidente.                        |
+| `onibus_int`       | Número de ônibus interurbanos envolvidos no acidente.                          |
+| `caminhao`         | Número de caminhões envolvidos no acidente.                                    |
+| `moto`             | Número de motocicletas envolvidas no acidente.                                 |
+| `carroca`          | Número de carroças envolvidas no acidente.                                     |
+| `bicicleta`        | Número de bicicletas envolvidas no acidente.                                   |
+| `outro`            | Número de outros veículos envolvidos no acidente.                              |
+| `noite_dia`        | Turno em que ocorreu o acidente.                                               |
+| `regiao`           | Zona da cidade onde ocorreu o acidente.                                        |
+| `cont_vit`         | Informação se o acidente possui ou não vítimas.                                |
+| `ups`              | Unidade padrão de severidade, peso atribuído conforme gravidade dos danos.      |
+| `consorcio`        | Consórcio responsável pelo(s) ônibus urbano(s) envolvido(s) no acidente.       |
+
+
+# Preparação dos dados
+
+## Importando DF´s
+Primeiramente, carregamos as bibliotecas que usaremos. Logo após, precisamos importar os dois dataframes, armazenando-os em duas váriaveis. Para identificação da divisão de colunas, usamos o separador ",". E em sequência, os concatenamos.
+
+```{r}
+library(dplyr)       # Manipulação de dados
+library(ggplot2)     # Gráficos
+library(tidyr)       # Limpeza de dados
+library(readr)       # Leitura de arquivos CSV
+library(leaflet)      # Criação de mapas interativos
+library(leaflet.extras) # Gráficos
+library(plotly)      #Gráficos
+library(corrplot) # Correlação
+
+#Carregando arquivos e corrigindo identificação do separador
+
+df_1 <- read.csv("C:/Users/victo/Documents/cat_acidentes_parte1.csv", sep = ',')
+df_2 <- read.csv("C:/Users/victo/Documents/cat_acidentes_parte2.csv", sep = ',')
+
+# Juntando os dois DataFrames
+df <- rbind(df_1, df_2)
+head(df)
+```
+## Remoção das colunas inviáveis
+Foi decidido remover colunas que não irão impactar diretamente na análise e as que trazem informções redundantes.
+```{r}
+# Remover as colunas especificadas que não serão utilizadas ou que são redundantes
+df <- df %>%
+  select(-data_extracao, -predial1, -queda_arr, -idacidente, -log1, -log2, -consorcio)
+```
+## Análise dos tipos de colunas
+É possível observar a divisão das colunas entre tipos numéricos e character. E que as colunas data e hora estão como character e futuramente, vão precisar ser transformadas nos tipos Data e Hora.
+```{r}
+# Visualizar os tipos de colunas
+sapply(df, class)
+```
+## Removendo valores nulos
+Valores nulos podem comprometer a integridade dos dados e distorcer os resultados das análises. Removê-los é essencial para garantir a precisão dos cálculos, a qualidade das modelagens e a consistência na análise. Dados limpos permitem uma interpretação mais clara e eficiente, facilitando a tomada de decisões informadas e melhorando a eficiência operacional.
+```{r}
+# Contagem de valores ausentes por coluna
+colSums(is.na(df))  
+
+# Remover linhas com NA
+df <- drop_na(df)
+
+# Contagem de valores ausentes por coluna novamente
+colSums(is.na(df))  
+```
+# Análise Exploratória
+
+## Mapa de Calor dos acidentes
+Para entender a distribuição espacial dos acidentes de trânsito, começamos com um mapa de calor. Este tipo de visualização é eficaz para identificar áreas com alta densidade de acidentes, oferecendo uma visão geral das regiões mais problemáticas. No entanto, o mapa de calor pode apresentar limitações em termos de precisão e detalhamento, especialmente quando se trata de distinguir entre áreas muito próximas ou sobrepostas. Por isso, em sequência, utilizaremos um mapa de cluster.
+```{r}
+# Selecionar latitude e longitude
+geo_data <- df %>% 
+  select(latitude, longitude)
+
+#Grafico de calor
+leaflet(geo_data) %>%
+  addTiles() %>%
+  setView(lng = -51.2177, lat = -30.0346, zoom = 12) %>%  # Centraliza em Porto Alegre com zoom adequado
+  addHeatmap(lng = ~longitude, lat = ~latitude, blur = 20, max = 0.05, radius = 15)
+
+```
+## Mapa de Cluster
+O mapa de cluster proporciona uma visualização mais detalhada e precisa, agrupando dados em clusters que representam áreas específicas com características semelhantes. Isso permite uma análise mais aprofundada, identificando padrões mais sutis e diferenciando melhor entre regiões de alta e baixa frequência de acidentes. Combinando ambos os métodos, obtemos uma visão abrangente e detalhada da distribuição dos acidentes, facilitando a formulação de estratégias mais eficazes para melhorar a segurança viária.
+```{r}
+#Grafico de cluster
+leaflet(geo_data) %>%
+  addTiles() %>%
+  setView(lng = -51.2177, lat = -30.0346, zoom = 12) %>%
+  addMarkers(lng = ~longitude, lat = ~latitude, clusterOptions = markerClusterOptions())
+```
+Veja que é possível notar predominância nas regiões Norte e Leste, principalmente nas regiões próximas ao Aeroporto e as Praias, podendo ser um indicador de grande fluxo na região.
+
+## Proporção por tipo de acidente, gráfico de Pizza
+Um gráfico de pizza é ideal para mostrar a distribuição dos tipos de acidentes de forma clara e intuitiva. Ele facilita a comparação das proporções relativas de cada categoria, tornando a informação visualmente acessível e fácil de entender. É uma ferramenta eficaz para destacar rapidamente quais tipos de acidentes são mais comuns e ajudar na comunicação de maneira impactante.
+```{r}
+# Contando as ocorrências de cada tipo de acidente
+contagem <- table(df$tipo_acid)
+print(contagem)
+# Número de categorias
+qtd <- length(contagem)
+print(qtd)
+
+# Criando rótulos com apenas as porcentagens
+lbls <- paste(round(contagem / sum(contagem) * 100, 1), "%")
+
+# Ajustar a área de plotagem para dar espaço para a legenda
+par(mar = c(5, 4, 4, 0))  # Ajuste das margens
+
+# Criar o gráfico de pizza com rótulos apenas com porcentagens
+pie(x = contagem, 
+    labels = lbls, 
+    main = "Proporção de Tipos de Acidentes",  # Ajuste do título
+    col = rainbow(qtd),
+    cex = 0.6)
+
+# Adicionar a legenda à esquerda, ajustando o tamanho e nome
+legend("topleft", 
+       inset = c(0,0),  # Posicionar a legenda
+       col = rainbow(qtd), 
+       pch = 15, 
+       legend = names(contagem),  # Usar os tipos de acidente como legenda
+       title = "Tipos de Acidente",  # Ajustar o título da legenda
+       cex = 0.6)  # Ajustar o tamanho da legenda
+
+```
+Percebe-se destaque negativo para Albaroamento e Colisão, sendo os casos mais comuns
+
+## Distribuição dos acidentes por tipo de veículo, Gráfico de colunas
+Um gráfico de colunas é essencial para visualizar a distribuição dos acidentes por tipo de veículo porque facilita a comparação clara entre categorias, identifica rapidamente quais veículos estão mais envolvidos em acidentes e ajuda na formulação de estratégias de segurança direcionadas. Ele proporciona uma visão intuitiva e eficaz para a tomada de decisões e comunicação dos dados.
+```{r}
+#Distribuição de acidentes por veiculo
+
+# Calcular as somas
+soma_valores1 <- sum(df$auto)
+soma_valores2 <- sum(df$taxi)
+soma_valores3 <- sum(df$lotacao)
+soma_valores4 <- sum(df$onibus_urb)
+soma_valores5 <- sum(df$onibus_met)
+soma_valores6 <- sum(df$onibus_int)
+soma_valores7 <- sum(df$caminhao)
+soma_valores8 <- sum(df$moto)
+soma_valores9 <- sum(df$carroca)
+soma_valores10 <- sum(df$bicicleta)
+soma_valores11 <- sum(df$outro)
+soma_valores12 <- sum(df$patinete)
+
+#############
+
+# Carregar a biblioteca plotly
+library(plotly)
+
+# Dados para o gráfico
+contagens <- c(soma_valores1, soma_valores2, soma_valores3,
+               soma_valores4, soma_valores5, soma_valores6,
+               soma_valores7, soma_valores8, soma_valores9,
+               soma_valores10, soma_valores11, soma_valores12)
+
+# Nomes das categorias
+nomes_categorias <- c("Auto", "Taxi", "Lotacao", "Onibus Urb", "Onibus Met", 
+                      "Onibus Int", "Caminhao", "Moto", "Carroca", 
+                      "Bicicleta", "Outro", "Patinete")
+
+# Criar um DataFrame para plotly
+df_contagens <- data.frame(
+  Categoria = nomes_categorias,
+  Contagem = contagens
+)
+
+# Ordenar o DataFrame por Contagem em ordem decrescente
+df_contagens <- df_contagens[order(df_contagens$Contagem, decreasing = TRUE), ]
+
+# Reordenar o fator Categoria para refletir a ordem desejada
+df_contagens$Categoria <- factor(df_contagens$Categoria, levels = df_contagens$Categoria)
+
+# Criar o gráfico de barras com plotly
+fig <- plot_ly(df_contagens, x = ~Categoria, y = ~Contagem, type = 'bar')
+
+# Atualizar layout para adicionar título e ajustar aparência
+fig <- fig %>% layout(title = 'Distribuição dos Acidentes',
+                      xaxis = list(title = 'Categoria'),
+                      yaxis = list(title = 'Contagem'),
+                      showlegend = FALSE)
+
+# Exibir o gráfico
+fig
+
+```
+Ficou evidentende e alarmante a grande quantidade de acidentes envolvidos com carros, sendo muito superior aos outros veículos, sendo seguido por dados também elevados de acidentes com motocicletas.
+
+## Gráfico de Colunas principais Ano-Mês com mais acidentes
+Quais os impactos que certos períodos festivos ou climáticos interferem na quantidade de acidentes?
+
+### Necessidade de tranformar coluna data
+Bom, para manipulação da coluna data (que está como character), vai ser necessária a sua transformação para o tipo Data, permitindo a manipulação da coluna e análise mais profunda nos períodos mensais e anuais.
+```{r}
+# Convertendo coluna para tipo Date
+df$data <- as.Date(df$data)
+# Supondo que df seja seu DataFrame e a coluna se chame 'data'
+class(df$data)
+
+# Transformando em posix
+df$data <- as.POSIXct(df$data, format="%Y-%m-%d %H:%M:%S")
+
+# Extraindo ano e mês
+df <- df %>%
+  mutate(ano_mes = format(data, "%Y-%m"))
+
+# Contando o número de acidentes por ano e mês
+df_contagem <- df %>%
+  group_by(ano_mes) %>%
+  summarise(contagem = n())%>%
+  arrange(desc(contagem)) %>%
+  top_n(20)
+
+```
+### Criando o gráfico de barras citado:
+```{r}
+ggplot(df_contagem, aes(x = reorder(ano_mes, -contagem), y = contagem)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Top 20 Ano-Meses com Mais Acidentes", x = "Ano-Mês", y = "Número de Acidentes") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+## Análise por mês, desconsiderando meses de 2024
+Os meses de 2024 são desconsiderados para não desequilibrar a quantidades de meses catalogados, podendo  criar uma falsa impressão
+```{r}
+#Analise por mes
+
+# Filtrando os dados para excluir o ano de 2024
+df_filtrado <- df %>%
+  filter(format(data, "%Y") != "2024")
+
+# Extraindo o mês
+df_mensal <- df_filtrado %>%
+  mutate(mes = format(data, "%m")) %>%  # Extraindo o mês como número
+  group_by(mes) %>%
+  summarise(contagem = n(), .groups = 'drop') %>%
+  arrange(as.numeric(mes))  # Ordena os meses numericamente
+
+# Converter a coluna mes para fator com os níveis de 01 a 12
+df_mensal <- df_mensal %>%
+  mutate(mes = factor(mes, levels = sprintf("%02d", 1:12)))
+
+# Criando o gráfico de barras
+ggplot(df_mensal, aes(x = reorder(mes, -contagem), y = contagem)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Número de Acidentes por Mês (Excluindo 2024)", x = "Mês", y = "Número de Acidentes") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+Nota-se o mês de dezembro, mês das festas de ano novo e natal liderando os índices. Mostrando a interferência de festividades, que muitas vezes misturadas com álcool, aumentam o número de casos, superando até períodos de grande chuva na região, como Maio.
+
+## Análise anual de acidentes com gráfico de linhas
+Um gráfico de linhas é ideal para analisar acidentes ao longo dos anos, pois permite visualizar as variações anuais de forma clara e comparativa. Ele facilita a identificação de tendências e padrões ao longo do tempo, ajudando a entender a evolução dos acidentes e a planejar estratégias de segurança mais eficazes.
+
+```{r}
+# Extraindo o ano
+df_anual <- df_filtrado %>%
+  mutate(ano = format(data, "%Y")) %>%
+  group_by(ano) %>%
+  summarise(contagem = n(), .groups = 'drop') %>%
+  arrange(ano)  # Ordena os anos
+```
+### Ajuste necessário! coluna ano com valor indevido.
+```{r}
+# Verificar o resultado
+head(df_anual)
+# Percebe-se erro de preenchimento com uma célula na coluna ano com valor 2202
+```
+### Como tratamento, iremos exluir a linha que possui célula 2202 na coluna ano
+```{r}
+# Filtrar o DataFrame para remover linhas onde a coluna 'ano' é igual a 2202
+df_anual <- df_anual %>%
+  filter(ano != 2202)
+
+# Verificar o resultado
+head(df_anual)
+```
+### Finalmente, criando gráfico de linhas
+```{r}
+# Criando o gráfico de linhas
+ggplot(df_anual, aes(x = ano, y = contagem, group = 1)) +
+  geom_line(color = "blue") +
+  geom_point(color = "blue") +
+  labs(title = "Evolução do Número de Acidentes por Ano", x = "Ano", y = "Número de Acidentes") +
+  theme_minimal()
+```
+É possível oberservar um crescimentento anual no número de casos de acidentes, com exceção do ano de 2020, em que ocorreu a pandemia do Corona Vírus, e as pessoas diminuíram consideravelmente o fluxo nas ruas.
+
+## Exibindo distribuição gravidade dos acidentes (ups)
+```{r}
+# Gravidade dos acidentes 
+
+# Calcular a contagem de cada valor na coluna 'ups'
+contagem_ups <- df %>%
+  count(ups) %>%
+  arrange(desc(n))  # Ordenar por contagem em ordem decrescente
+
+# Garantir que os valores de ups sejam tratados como fatores com a ordem desejada
+contagem_ups$ups <- factor(contagem_ups$ups, levels = c(1, 5, 13))
+
+# Criar o gráfico de barras com plotly
+fig <- plot_ly(contagem_ups, x = ~ups, y = ~n, type = 'bar', 
+               text = ~n, textposition = 'auto',
+               marker = list(color = 'skyblue')) %>%
+  layout(title = 'Contagem de Valores na Coluna "ups"',
+         xaxis = list(title = 'Valores', categoryorder = 'array', categoryarray = c(1, 5, 13)),
+         yaxis = list(title = 'Contagem'))
+
+# Exibir o gráfico
+fig
+```
+Entendendo o ups:
+
+- Acidente somente Danos Materiais - Fator de ponderação 1
+
+- Acidente com Feridos - Fator de ponderação 5
+
+- Acidente com Vítimas Fatais - Fator de ponderação 13
+
+Nota-se que os frêquencia dos acidadentes seguem a ordem oposta da sua gravidade
+
+## Analisando correlações, com tabela de correlação
+
+Uma tabela de correlação exibe as relações entre variáveis, mostrando como uma variável está associada a outra. Os valores variam de -1 a 1, indicando a força e a direção da relação: 1 significa uma correlação positiva perfeita, -1 uma correlação negativa perfeita, e 0 nenhuma correlação. Essa tabela ajuda a identificar padrões e relações entre variáveis em um conjunto de dados.
+
+```{r}
+# Selecionar as colunas de interesse
+df_corr <- df %>%
+  select(fatais,cont_vit, auto, taxi, moto,lotacao, onibus_met,onibus_urb,onibus_int,caminhao,carroca,bicicleta,patinete)
+
+# Calcular a matriz de correlação
+correlation_matrix <- cor(df_corr, method = "pearson", use = "complete.obs")
+
+# Exibir a matriz de correlação
+print(correlation_matrix)
+
+# Matriz de correlaçao viual
+corrplot(correlation_matrix,
+         method = "color",  # Usar cores ao invés de variar o tamanho
+         type = "upper",    # Apenas mostrar a parte superior da matriz
+         tl.col = "black",  # Cor dos textos das labels (usar branco para contraste)
+         tl.srt = 45,       # Ângulo das labels no eixo x
+         col = colorRampPalette(c("blue", "white", "red"))(200),  # Gradiente de cor
+         is.corr = TRUE,    # Para deixar a escala de cor entre -1 e 1
+        # cl.lim = c(-1, 1), # Limitar os valores da correlação para -1 e 1
+         pch.cex = 2        # Controla o tamanho dos pontos (mantém o mesmo tamanho)
+)
+
+```
+Foi possível perceber que os acidentes com moto são os que mais se correlacionam com os acidentes fatais("fatais"), pois o seu quadrado tem a tonalidade mais próxima da vermelha, chegando mais próximo de 1, ainda que seja um valor na casa de 0.3. Já o número de acidentes com carro é o valor que chega mais próximo ao valor invermente proporcional aos acidentes com vítimas("cont_vit), chegando o mais próximo de -1 em relação a essa coluna.
+
+## Analisando Fatalidades por hora com gráfico de linha
+
+### Necessário transformar coluna hora de character para Hora
+
+```{r}
+# Verificar a estrutura da coluna
+class(df$hora)
+
+# Converte hora pra posix
+df$hora <- as.POSIXct(df$hora, format = "%H:%M:%S")
+
+# Verificar a estrutura da coluna novamente
+class(df$hora)
+
+# Cria uma coluna com a hora formatada
+df$hora_formatada <- format(df$hora, "%H:%M:%S")
+head(df$hora_formatada)
+
+#Isola apenas a hora
+df$horas <- format(df$hora, "%H")
+head(df$horas)
+#Coluna ta como character
+class(df$horas)
+# Transforma pra numerico
+df$horas <- as.numeric(df$horas)
+
+
+# Agrupar os dados por hora e contar os acidentes fatais
+df_fatal <- df %>%
+  group_by(horas) %>%
+  summarise(fatalidades = sum(fatais > 0, na.rm = TRUE))
+
+# Criar gráfico de linha para fatalidades por hora
+ggplot(df_fatal, aes(x = horas, y = fatalidades)) +
+  geom_line(color = "red", size = 1) +
+  geom_point(color = "red", size = 2) +  # Adiciona pontos nos dados
+  labs(title = "Fatalidades por Hora do Dia", x = "Hora", y = "Número de Fatalidades") +
+  scale_x_continuous(breaks = seq(0, 23, 1))  # Mostrar todas as horas do dia
+```
+Nota-se que os horários das 7 da manhã e 19 horas têm os picos de fatalidades, horários que são historicamente momentos de desolcamento para estudo ou trabalho.
+
+## Gráficos de linhas para dias da semana com acidentes letais
+```{r}
+# Cria df para ver dia da semana que têm acidentes mais fatais
+df_fatal_dia <- df %>%
+  group_by(dia_sem) %>%
+  summarise(fatalidades = sum(fatais > 0, na.rm = TRUE))
+
+# Criar gráfico de linha para fatalidades por dia da semana
+ggplot(df_fatal_dia, aes(x = dia_sem, y = fatalidades, group = 1)) +  # group = 1 para garantir uma única linha
+  geom_line(color = "red", size = 1) +
+  geom_point(color = "red", size = 3) +  # Adiciona pontos nos dados
+  labs(title = "Fatalidades por Dia da Semana", x = "Dia da Semana", y = "Número de Fatalidades") +
+  theme_minimal() +  # Estilo minimalista
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Inclinar os valores do eixo x
+```
+Final de semana liderando indices, mais uma levantando a ideia de uso de alcool nos momentos de lazer misturados com a direção perigosa, resultando em tragédia.
+
+## Gráfico de barras empilhadas para correlação entre gravidade ups e regiões
+
+```{r}
+# Criar uma tabela de contigência entre 'regiao' e 'ups'
+tabela_contigencia <- df %>%
+  count(regiao, ups)
+
+# Exibir a tabela
+print(tabela_contigencia)
+
+
+# Carregar o pacote plotly
+library(plotly)
+
+# Criar gráfico de barras empilhadas
+fig <- plot_ly(tabela_contigencia, 
+               x = ~regiao, 
+               y = ~n, 
+               color = ~ups, 
+               type = 'bar') %>%
+  layout(title = 'Relação entre Região e UPS',
+         xaxis = list(title = 'Região'),
+         yaxis = list(title = 'Contagem'))
+
+# Exibir o gráfico
+fig
+
+```
+Nota-se que o Leste lidera a quantidade de casos registrados com ups, porém se sobressaem principalmente em casos de grau 1, enquanto o sul que possui a segunda menor quantidade de casos, lidera em quantidade de casos de grau 13, sendo os mais graves.
+
+# Conclusão
+
+## Metodologia e Dados Utilizados
+Utilizamos um conjunto de dados contendo informações detalhadas dos acidentes de trânsito, incluindo variáveis como localização (latitude e longitude), tipo de veículo, tipo de acidente, severidade (UPS), e características temporais (data, hora, mês, dia da semana). A metodologia envolveu:
+
+Mapas de calor e cluster para entender a distribuição espacial dos acidentes.
+Gráficos de pizza, colunas e gráficos empilhados para explorar a proporção dos tipos de acidentes e a frequência de envolvimento de diferentes tipos de veículos.
+Análises temporais utilizando gráficos de linhas para examinar padrões ao longo do tempo, como por ano, mês, hora do dia e dia da semana.
+Correlação entre as variáveis para identificar relações entre fatores, como tipo de veículo e severidade dos acidentes.
+
+## Insights Interessantes
+- Distribuição Espacial: Identificamos áreas de alta densidade de acidentes no Centro e na região Leste de Porto Alegre, principalmente próximas ao Aeroporto e áreas de maior fluxo.Além disso, foi demonstrada, com grande precisão o local dos acidentes, através do gráfico de Cluster.
+- Tipos de Acidentes: O albaroamento (colisões laterais) e colisão foram os tipos de acidentes mais comuns.
+- Veículos Envolvidos: Carros e motocicletas foram os veículos mais envolvidos em acidentes, com carros liderando de forma alarmante e de motos se correlacionando  de maiores graus de fatalidade.
+- Temporalidade: Picos de fatalidades ocorrem nos horários de maior movimentação, como 7h e 19h, e o final de semana é o período mais perigoso, sugerindo o impacto de comportamentos de risco, como dirigir sob influência de álcool; conclusão que é fortalecida pela liderança do mês de dezembro, mês das festas de fim de ano, no número de acidentes.
+- Severidade e Localização: A região Leste apresenta o maior número de acidentes, enquanto a região Sul lidera em casos de maior gravidade (UPS 13), com vítimas fatais.
+
+## Implicações para Clientes
+Esses insights podem auxiliar órgãos governamentais e responsáveis pela segurança no trânsito a:
+
+- Direcionar campanhas educativas focadas em comportamentos de risco em horários e locais críticos.
+- Implementar medidas de controle como reforço de sinalização e fiscalização em áreas de maior fluxo e nos finais de semana.
+- Planejar melhorias viárias nas regiões mais impactadas, como o Leste, visando reduzir a ocorrência de acidentes.
+- Incentivar a investigação de como a região Sul, possuindo menos casos no geral, lidera o nível de acidentes graves.
+
+## Limitações da Análise
+Falta de Detalhamento em Variáveis: Certos fatores, como condições climáticas, não foram considerados, mas poderiam influenciar os acidentes.
+
+## Melhorias Futuras
+- Adicionar mais variáveis como clima e condições da via para enriquecer a análise.
+- Utilizar modelos preditivos para identificar padrões futuros e otimizar as intervenções.
+- Analisar o comportamento ao longo do tempo com mais detalhes, incluindo mais anos de dados para um panorama mais robusto.
+- Analisar o prejuízo que os consórcios estão tendo.
+
+Essas melhorias podem gerar uma compreensão mais profunda dos fatores que contribuem para acidentes e ajudar a formular políticas mais eficazes.
